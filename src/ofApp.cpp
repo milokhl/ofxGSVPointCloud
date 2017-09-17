@@ -1,7 +1,9 @@
 #include "ofApp.h"
 #include "base64.h"
 #include <zlib.h>
+#include <iostream>
 
+bool didSave = false;
 //--------------------------------------------------------------
 void ofApp::setup(){
 
@@ -10,7 +12,8 @@ void ofApp::setup(){
     ofRegisterURLNotification(this);
     
     //convert address to lat/lon coordinates
-    vector<float> latlon = GoogleAddressToLatLon("gent vlasmarkt");
+    vector<float> latlon = GoogleAddressToLatLon("725 5th Ave, New York");
+    std::cout << "LatLon:" << latlon[0] << latlon[1] << std::endl;
     
     //load google data from lat/lon
     ofHttpRequest request = ofHttpRequest("http://cbk0.google.com/cbk?output=xml&ll=" + ofToString(latlon[0]) + "," + ofToString(latlon[1]) + "&dm=1","");
@@ -51,6 +54,10 @@ void ofApp::urlResponse(ofHttpResponse & response) {
             XML.loadFromBuffer(response.data);
             pano.pano_id = XML.getAttribute("panorama:data_properties", "pano_id", "");
             pano.depthmap = XML.getValue("panorama:model:depth_map", "");
+            std::string yaw = XML.getAttribute("panorama:annotation_properties:link", "yaw_deg", "");
+            std::string best_view_direction_deg = XML.getAttribute("panorama:data_properties", "best_view_direction_deg", "");
+            std::cout << "Yaw attribute:" << yaw << std::endl;
+            std::cout << "Best view dir deg:" << best_view_direction_deg << std::endl;
             
             constructPanoImage();
             
@@ -102,6 +109,15 @@ void ofApp::urlResponse(ofHttpResponse & response) {
             
             //create the point cloud
             constructPointCloud();
+
+            // save the point cloud to disk
+            if (!didSave) {
+                pointcloud.save("/home/milo/packages/of/apps/myApps/ofxGSVPointCloud/src/tmp/sample_ply_nonbinary.ply");
+                std::cout << "Saved first" << std::endl;
+                pointcloud.save("/home/milo/packages/of/apps/myApps/ofxGSVPointCloud/src/tmp/sample_ply_binary.ply", true);
+                std::cout << "Saved second" << std::endl;
+                didSave = true;
+            }
         }
     }
 }
